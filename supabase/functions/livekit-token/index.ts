@@ -16,15 +16,20 @@ const corsHeaders = {
 };
 
 interface TokenRequest {
-  room: string;
+  // UUID of the Supabase room row. Server prefixes 'room-' to derive the
+  // LiveKit room name so the namespace is distinct from any other system.
+  room_id?: string;
   // Optional: client may pass a display name override.
   name?: string;
 }
+
+const DEFAULT_ROOM_ID = '00000000-0000-0000-0000-000000000001';
 
 interface TokenResponse {
   token: string;
   url: string;
   identity: string;
+  room: string;
   expiresAt: number;
 }
 
@@ -62,15 +67,16 @@ serve(async (req: Request): Promise<Response> => {
   }
   const user = userData.user;
 
-  let body: TokenRequest;
-  try {
-    body = await req.json();
-  } catch {
-    return json({ error: 'invalid_json' }, 400);
+  let body: TokenRequest = {};
+  if (req.headers.get('content-length') !== '0') {
+    try {
+      body = await req.json();
+    } catch {
+      return json({ error: 'invalid_json' }, 400);
+    }
   }
-  if (!body.room || typeof body.room !== 'string') {
-    return json({ error: 'missing_room' }, 400);
-  }
+  const roomId = body.room_id ?? DEFAULT_ROOM_ID;
+  const livekitRoom = `room-${roomId}`;
 
   const ttlSeconds = 60 * 10;
   const at = new AccessToken(apiKey, apiSecret, {
@@ -79,7 +85,7 @@ serve(async (req: Request): Promise<Response> => {
     ttl: ttlSeconds,
   });
   at.addGrant({
-    room: body.room,
+    room: livekitRoom,
     roomJoin: true,
     canPublish: true,
     canSubscribe: true,
@@ -92,6 +98,7 @@ serve(async (req: Request): Promise<Response> => {
     token,
     url: wsUrl,
     identity: user.id,
+    room: livekitRoom,
     expiresAt: Math.floor(Date.now() / 1000) + ttlSeconds,
   };
   return json(response, 200);
