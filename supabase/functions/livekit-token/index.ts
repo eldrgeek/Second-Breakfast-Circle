@@ -24,6 +24,7 @@ interface TokenRequest {
 }
 
 const DEFAULT_ROOM_ID = '00000000-0000-0000-0000-000000000001';
+export const TOKEN_TTL_SECONDS = 60 * 10;
 
 interface TokenResponse {
   token: string;
@@ -33,7 +34,34 @@ interface TokenResponse {
   expiresAt: number;
 }
 
-serve(async (req: Request): Promise<Response> => {
+export interface MintArgs {
+  apiKey: string;
+  apiSecret: string;
+  identity: string;
+  name?: string;
+  roomId?: string;
+}
+
+/** Mint a LiveKit AccessToken — extracted for unit tests. */
+export async function mintToken(args: MintArgs): Promise<{ token: string; room: string }> {
+  const room = `room-${args.roomId ?? DEFAULT_ROOM_ID}`;
+  const at = new AccessToken(args.apiKey, args.apiSecret, {
+    identity: args.identity,
+    name: args.name ?? args.identity,
+    ttl: TOKEN_TTL_SECONDS,
+  });
+  at.addGrant({
+    room,
+    roomJoin: true,
+    canPublish: true,
+    canSubscribe: true,
+    canPublishData: true,
+  });
+  return { token: await at.toJwt(), room };
+}
+
+// Exported for unit tests; production runtime invokes via serve() below.
+export const handler = async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -75,34 +103,31 @@ serve(async (req: Request): Promise<Response> => {
       return json({ error: 'invalid_json' }, 400);
     }
   }
-  const roomId = body.room_id ?? DEFAULT_ROOM_ID;
-  const livekitRoom = `room-${roomId}`;
-
-  const ttlSeconds = 60 * 10;
-  const at = new AccessToken(apiKey, apiSecret, {
+  const { token, room } = await mintToken({
+    apiKey,
+    apiSecret,
     identity: user.id,
-    name: body.name ?? (user.user_metadata?.display_name as string | undefined) ?? user.email ?? user.id,
-    ttl: ttlSeconds,
+    name:
+      body.name ??
+      (user.user_metadata?.display_name as string | undefined) ??
+      user.email ??
+      user.id,
+    roomId: body.room_id,
   });
-  at.addGrant({
-    room: livekitRoom,
-    roomJoin: true,
-    canPublish: true,
-    canSubscribe: true,
-    canPublishData: true,
-  });
-
-  const token = await at.toJwt();
 
   const response: TokenResponse = {
     token,
     url: wsUrl,
     identity: user.id,
-    room: livekitRoom,
-    expiresAt: Math.floor(Date.now() / 1000) + ttlSeconds,
+    room,
+    expiresAt: Math.floor(Date.now() / 1000) + TOKEN_TTL_SECONDS,
   };
   return json(response, 200);
-});
+};
+
+if (Deno.env.get('LIVEKIT_TOKEN_TEST_MODE') !== '1') {
+  serve(handler);
+}
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
