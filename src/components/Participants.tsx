@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useStore } from '../store/useStore';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
+import type { User } from '../types';
 
 export function Participants() {
   const users = useStore(state => state.users);
