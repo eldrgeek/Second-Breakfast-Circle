@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { ROOM_CONFIG } from '../config';
 import '@livekit/components-styles';
 import { LiveKitBridge } from './LiveKitBridge';
+import { LiveKitConnectionBanner } from './LiveKitConnectionBanner';
 
 interface TokenPayload {
   token: string;
@@ -102,6 +103,7 @@ export function LiveKitRoomProvider({
       video={video}
     >
       <LiveKitBridge />
+      <LiveKitConnectionBanner />
       {children}
     </LiveKitRoom>
   );
