@@ -19,6 +19,15 @@ export const ROOM_CONFIG = {
   DEFAULT_ROOM_ID: "00000000-0000-0000-0000-000000000001"
 } as const;
 
+// Transport flag — flip to LiveKit once parity verified. The legacy WebRTC
+// path and this flag are scheduled for deletion (sbc-2qt) once the LiveKit
+// migration ships.
+//
+// In Vite, `import.meta.env.VITE_USE_LIVEKIT` is a string; treat anything
+// other than "true" as false so a missing var defaults to legacy.
+export const USE_LIVEKIT: boolean =
+  (import.meta.env.VITE_USE_LIVEKIT ?? '').toString().toLowerCase() === 'true';
+
 // Tour steps configuration
 export const TOUR_STEPS = [
   {
