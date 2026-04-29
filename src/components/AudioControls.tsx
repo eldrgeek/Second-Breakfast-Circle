@@ -2,8 +2,17 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import WebRTCManager from '../lib/webrtc';
+import { USE_LIVEKIT } from '../config';
+import { LiveKitAudioControls } from './LiveKitAudioControls';
 
 export function AudioControls() {
+  if (USE_LIVEKIT) {
+    return <LiveKitAudioControls />;
+  }
+  return <LegacyAudioControls />;
+}
+
+function LegacyAudioControls() {
   const { currentUser, users, setUserSpeakingLevel } = useStore();
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const webrtcRef = useRef<WebRTCManager | null>(null);
