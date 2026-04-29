@@ -12,7 +12,8 @@ import { OnboardingTour } from './OnboardingTour';
 import { ZoomIn, ZoomOut, RotateCcw, LogOut, Settings } from 'lucide-react';
 import * as THREE from 'three';
 import { useStore } from '../store/useStore';
-import { TOUR_STEPS } from '../config';
+import { TOUR_STEPS, USE_LIVEKIT } from '../config';
+import { LiveKitRoomProvider } from './LiveKitRoomProvider';
 
 export function Room() {
   const controlsRef = useRef<any>(null);
@@ -88,7 +89,7 @@ export function Room() {
     setShowOnboarding(true);
   };
 
-  return (
+  const content = (
     <div className="room-container w-full h-screen relative">
       <Canvas
         camera={{ 
@@ -186,4 +187,13 @@ export function Room() {
       />
     </div>
   );
+
+  if (USE_LIVEKIT && currentUser) {
+    return (
+      <LiveKitRoomProvider audio={currentUser.audioEnabled} video={currentUser.videoEnabled}>
+        {content}
+      </LiveKitRoomProvider>
+    );
+  }
+  return content;
 }
