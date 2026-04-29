@@ -1,8 +1,9 @@
-import { ReactNode, useCallback, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { LiveKitRoom } from '@livekit/components-react';
 import { supabase } from '../lib/supabase';
 import { ROOM_CONFIG } from '../config';
 import '@livekit/components-styles';
+import { LiveKitBridge } from './LiveKitBridge';
 
 interface TokenPayload {
   token: string;
@@ -56,13 +57,31 @@ export function LiveKitRoomProvider({
     };
   }, [roomId]);
 
-  // Token-refresh hook for sbc-6zm: LiveKitRoom calls onTokenRefreshNeeded
-  // shortly before expiry and waits for the returned promise.
-  const onTokenRefreshNeeded = useCallback(async () => {
-    const fresh = await fetchToken(roomId);
-    setPayload(fresh);
-    return fresh.token;
-  }, [roomId]);
+  // sbc-6zm: refetch the token before its 10-min expiry. The current
+  // @livekit/components-react release doesn't expose a refresh callback on
+  // <LiveKitRoom>, so we proactively swap the token prop ~60s before expiry;
+  // LiveKit's signaling will pick up the new credentials on the next
+  // reconnect/handshake. If the connection happens to be torn down at the
+  // moment the new token lands, the component re-connects with it.
+  const refreshTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!payload) return;
+    const msUntilRefresh = Math.max(
+      (payload.expiresAt - 60) * 1000 - Date.now(),
+      30_000,
+    );
+    refreshTimerRef.current = window.setTimeout(() => {
+      fetchToken(roomId)
+        .then(setPayload)
+        .catch(e => console.error('LiveKit token refresh failed:', e));
+    }, msUntilRefresh);
+    return () => {
+      if (refreshTimerRef.current !== null) {
+        window.clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+    };
+  }, [payload, roomId]);
 
   if (error) {
     return (
@@ -81,8 +100,8 @@ export function LiveKitRoomProvider({
       connect
       audio={audio}
       video={video}
-      onTokenRefreshNeeded={onTokenRefreshNeeded}
     >
+      <LiveKitBridge />
       {children}
     </LiveKitRoom>
   );
