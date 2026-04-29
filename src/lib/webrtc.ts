@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface PeerConnection {
   connection: RTCPeerConnection;
@@ -13,6 +14,7 @@ class WebRTCManager {
   private localStream: MediaStream | null = null;
   private userId: string;
   private onStreamCallback: (userId: string, stream: MediaStream) => void;
+  private signalingChannel: RealtimeChannel | null = null;
 
   constructor(
     userId: string,
@@ -25,7 +27,8 @@ class WebRTCManager {
 
   private async setupSignaling() {
     const channel = supabase.channel('webrtc-signaling');
-    
+    this.signalingChannel = channel;
+
     channel
       .on('broadcast', { event: 'offer' }, async ({ payload }) => {
         if (payload.target === this.userId) {
@@ -56,6 +59,8 @@ class WebRTCManager {
         { urls: 'stun:stun2.l.google.com:19302' },
         { urls: 'stun:stun3.l.google.com:19302' },
         { urls: 'stun:stun4.l.google.com:19302' },
+        { urls: 'stun:vpsmikewolf.duckdns.org' },
+        { urls: 'turn:vpsmikewolf.duckdns.org' },
       ],
       iceTransportPolicy: 'all',
     };
@@ -71,7 +76,7 @@ class WebRTCManager {
 
     connection.onicecandidate = async (event) => {
       if (event.candidate) {
-        await supabase.channel('webrtc-signaling').send({
+        await this.signalingChannel?.send({
           type: 'broadcast',
           event: 'ice-candidate',
           payload: {
@@ -96,7 +101,7 @@ class WebRTCManager {
         const offer = await connection.createOffer();
         if (connection.signalingState !== 'stable') return;
         await connection.setLocalDescription(offer);
-        await supabase.channel('webrtc-signaling').send({
+        await this.signalingChannel?.send({
           type: 'broadcast',
           event: 'offer',
           payload: {
@@ -150,7 +155,7 @@ class WebRTCManager {
         const answer = await connection.createAnswer();
         await connection.setLocalDescription(answer);
         
-        await supabase.channel('webrtc-signaling').send({
+        await this.signalingChannel?.send({
           type: 'broadcast',
           event: 'answer',
           payload: {
