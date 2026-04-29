@@ -26,6 +26,9 @@ export interface UserUpdate {
   createdAt: string;
   updatedAt: string;
   reactions: UserReaction[];
+  recordingUrl?: string | null;
+  recordingDurationSeconds?: number | null;
+  recordingThumbnailUrl?: string | null;
 }
 
 export interface UserReaction {

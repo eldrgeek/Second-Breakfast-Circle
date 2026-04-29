@@ -75,6 +75,9 @@ export interface Database {
           content: string
           created_at: string
           updated_at: string
+          recording_url: string | null
+          recording_duration_seconds: number | null
+          recording_thumbnail_url: string | null
         }
         Insert: {
           id?: string
@@ -82,6 +85,9 @@ export interface Database {
           content: string
           created_at?: string
           updated_at?: string
+          recording_url?: string | null
+          recording_duration_seconds?: number | null
+          recording_thumbnail_url?: string | null
         }
         Update: {
           id?: string
@@ -89,6 +95,41 @@ export interface Database {
           content?: string
           created_at?: string
           updated_at?: string
+          recording_url?: string | null
+          recording_duration_seconds?: number | null
+          recording_thumbnail_url?: string | null
+        }
+      }
+      recordings: {
+        Row: {
+          id: string
+          user_id: string
+          room_id: string | null
+          url: string
+          duration_seconds: number | null
+          thumbnail_url: string | null
+          size_bytes: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          room_id?: string | null
+          url: string
+          duration_seconds?: number | null
+          thumbnail_url?: string | null
+          size_bytes?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          room_id?: string | null
+          url?: string
+          duration_seconds?: number | null
+          thumbnail_url?: string | null
+          size_bytes?: number | null
+          created_at?: string
         }
       }
       user_reactions: {
