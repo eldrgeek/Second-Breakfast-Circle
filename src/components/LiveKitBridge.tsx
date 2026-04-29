@@ -5,6 +5,7 @@ import {
 } from '@livekit/components-react';
 import { RoomEvent, Track } from 'livekit-client';
 import { useStore } from '../store/useStore';
+import { useLiveKitVideoStore } from '../store/liveKitVideoStore';
 import { supabase } from '../lib/supabase';
 
 /**
@@ -83,6 +84,8 @@ export function LiveKitBridge() {
       }
     };
 
+    const setVideoTrack = useLiveKitVideoStore.getState().setTrack;
+
     const handleSubscribed: Parameters<typeof room.on<RoomEvent.TrackSubscribed>>[1] = (
       track,
       _pub,
@@ -90,6 +93,8 @@ export function LiveKitBridge() {
     ) => {
       if (track.kind === Track.Kind.Audio && track.mediaStreamTrack) {
         attach(participant.identity, track.mediaStreamTrack);
+      } else if (track.kind === Track.Kind.Video && track.mediaStreamTrack) {
+        setVideoTrack(participant.identity, track.mediaStreamTrack);
       }
     };
 
@@ -100,6 +105,8 @@ export function LiveKitBridge() {
     ) => {
       if (track.kind === Track.Kind.Audio) {
         detach(participant.identity);
+      } else if (track.kind === Track.Kind.Video) {
+        setVideoTrack(participant.identity, null);
       }
     };
 

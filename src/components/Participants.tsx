@@ -2,6 +2,8 @@ import { useRef } from 'react';
 import { useStore } from '../store/useStore';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
+import { USE_LIVEKIT } from '../config';
+import { RemoteVideoPlane } from './RemoteVideoPlane';
 
 export function Participants() {
   const users = useStore(state => state.users);
@@ -79,6 +81,10 @@ export function Participants() {
                   emissiveIntensity={0.5}
                 />
               </mesh>
+            )}
+
+            {USE_LIVEKIT && user && user.isActive && user.videoEnabled && (
+              <RemoteVideoPlane userId={user.id} />
             )}
           </group>
         );
