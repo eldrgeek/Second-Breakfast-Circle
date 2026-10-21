@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code session worktrees (local only; never track them as gitlinks)
+.claude/worktrees/
